@@ -1,7 +1,7 @@
 {
   "name": "bot-money",
   "version": "1.1.0",
-  "description": "Telegram Bot For Calc Money",
+  "description": "Telegram Bot For Finance Money",
   "main": "src/index.ts",
   "author": "LineCoran",
   "homepage": "https://github.com/LineCoran/bot-family.git",
