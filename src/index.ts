@@ -1,10 +1,12 @@
-import { Telegraf } from 'telegraf';
+// @ts-nocheck
 
-import { about } from './commands';
-import { greeting } from './text';
+import { Context, Telegraf, Scenes, session, } from 'telegraf';
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { development, production } from './core';
-import { ISession, SessionService } from './api/session';
+import { errorMiddleware } from './middleware/errorMiddleware';
+import { start } from './commands/start';
+import { scences } from './scences';
+import { getExpenses } from './commands/getExpenses';
 
 const BOT_TOKEN = process.env.BOT_TOKEN || '';
 const ENVIRONMENT = process.env.NODE_ENV || '';
@@ -14,43 +16,31 @@ const bot = new Telegraf(BOT_TOKEN);
 bot.telegram.setMyCommands([
   {
     command: '/start',
-    description: 'start'
+    description: 'Старт'
   },
   {
-    command: '/create_family',
-    description: 'Создать учёт'
+    command: '/new_expense',
+    description: 'Внести расход'
   },
+  {
+    command: '/get_expenses',
+    description: 'Получить расходы'
+  }
 ])
 
-bot.command('start', (ctx) => {
-  ctx.sendMessage('hello');
-});
 
-bot.command('create_family', async (ctx) => {
-  const msg = ctx.update.message
-  const { username, last_name, first_name } = msg.from
+const stage = new Scenes.Stage(scences);
+bot.use(session());
+bot.use(stage.middleware());
+bot.catch(errorMiddleware)
 
-  if (!username) {
-    ctx.sendMessage('Не удалось определить ваш никнейм');
-    return;
-  }
+bot.command('start', start);
+bot.command('new_expense', (ctx: Context) => ctx.scene.enter('new_expense_scene'));
+bot.command('get_expenses', getExpenses);
 
-  const newSession: ISession = { username, last_name: last_name || '', first_name, chat_id: msg.chat.id }
 
-  try {
-
-    await SessionService.saveUserSession(newSession);
-    return ctx.sendMessage(`Сессия ${newSession.chat_id} успешно создана!`)
-  } catch(error) {
-    return ctx.sendMessage(`Ошибка ${error}`)
-  }
-})
-bot.on('message', greeting());
-bot.on('callback_query', (ctx) => {
-
-  console.log(ctx.callbackQuery);
-
-})
+bot.on('message', (context: Context) => {});
+bot.on('callback_query', (ctx) => {})
 
 //prod mode (Vercel)
 export const startVercel = async (req: VercelRequest, res: VercelResponse) => {

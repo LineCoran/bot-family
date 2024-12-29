@@ -10,6 +10,10 @@ const replyToMessage = (ctx: Context, messageId: number, string: string) =>
 
 const greeting = () => async (ctx: Context) => {
   debug('Triggered "greeting" text command');
+  // console.log('mesage', ctx);
+
+  console.log('from', ctx.message?.from)
+  console.log('chat_id', ctx.message?.chat.id)
 
   const messageId = ctx.message?.message_id;
   const userName = `${ctx.message?.from.first_name} ${ctx.message?.from.last_name}`;
