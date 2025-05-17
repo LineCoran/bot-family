@@ -7,6 +7,7 @@ export class UserDto {
   first_name = '';
   last_name = '';
   username = '';
+  token = '';
 
   constructor(ctx: Context) {
 
@@ -21,6 +22,5 @@ export class UserDto {
       this.last_name = ctx.message?.from.last_name || '';
       this.username = ctx.message?.from.username || '';
     }
-
   }
 }

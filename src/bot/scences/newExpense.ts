@@ -1,141 +1,185 @@
 // @ts-nocheck
 import { Scenes } from 'telegraf';
-// import { UserDto } from '../../backend/api/models/userDto';
-// import { CategoriesController } from '../../backend/api/controllers/categories';
-// import { ExpenseController, ICreateExpenseParams } from '../../backend/api/controllers/expense';
 import { dayjs } from '../../shared/utils/date-utils';
-import axios from 'axios';
-import { ApiRequests } from '../../api/api';
-import { UserDto } from '../../backend/api/models/userDto';
-
+import { AuthApi } from '../../api/authApi/authApi';
+import { UserDto } from '../../api/userDto';
 
 const MIN_CATEGORY_NAME_LENGTH = 3;
-const DATE_FORMAT_FOR_USER = 'ДД.ММ.ГГГГ';
+const DATE_FORMAT_FOR_USER = 'DD.MM.YYYY';
+const DATE_FORMAT_FOR_USER_DISPLAY = 'ДД.ММ.ГГГГ';
 
-// const api = axios.create({
-//   baseURL: 'http://localhost:8080/api',
-// })
-
-// const createExpenseRequest = async (data) => {
-//   const response = await api.post('/posts', data);
-//   console.log(response)
-// }
-
-const sendButtons = (inline_keyboard) => {
-  return {
-    reply_markup: JSON.stringify({ inline_keyboard })
-  }
+interface ExpenseState {
+  amount?: string;
+  category?: string;
+  date?: Date;
 }
 
-const isValidNumber = (value: unknown) => !isNaN(Number(value))
-
-const enterSumStep = (ctx) => {
-  ctx.reply('Сумма:');
-  ctx.wizard.state.expense = {};
-  return ctx.wizard.next();
+interface WizardContext extends Scenes.WizardContext {
+  wizard: {
+    state: ExpenseState;
+    next: () => void;
+  };
 }
 
-const enterCategoryStep = async (ctx) => {
-  const message = ctx.message.text;
-  if (!isValidNumber(message)) {
-    ctx.reply('Пожалуйста, введи корректное число');
-    return;
+const sendButtons = (inline_keyboard: any[][]) => ({
+  reply_markup: JSON.stringify({ inline_keyboard })
+});
+
+const isValidNumber = (value: unknown): boolean => !isNaN(Number(value));
+
+const handleApiError = (ctx: WizardContext, error: any, defaultMessage: string) => {
+  console.error('API Error:', error);
+  const errorMessage = error.response?.data?.message || error.message || defaultMessage;
+  ctx.reply(`Ошибка: ${errorMessage}`);
+  return ctx.scene.leave();
+};
+
+const enterSumStep = (ctx: WizardContext) => {
+  try {
+    ctx.reply('Введите сумму:');
+    ctx.wizard.state.expense = {};
+    return ctx.wizard.next();
+  } catch (error) {
+    console.error('Error in enterSumStep:', error);
+    ctx.reply('Произошла ошибка при инициализации. Пожалуйста, попробуйте позже.');
+    return ctx.scene.leave();
   }
-  const user = new UserDto(ctx);
-  ctx.wizard.state.expense.amount = message;
+};
 
-  const curCategories = [];
-  const inline_keyboard = [...curCategories].map(category => ([{ text: category.name, callback_data: category.id }]))
-
-
-  if (inline_keyboard.length > 0) {
-    ctx.reply(`Выбери категорию или введи новую (минимальное кол-во символов - ${MIN_CATEGORY_NAME_LENGTH}):`, sendButtons(inline_keyboard) )
-  } else  {
-    ctx.reply(`Выбери название категории:`, inline_keyboard);
-  }
-
-  return ctx.wizard.next()
-}
-
-const enterDateStep = async (ctx) => {
-
-  const categoryId = ctx.callbackQuery?.data;
-  const user = new UserDto(ctx);
-
-
-  if (!categoryId) {
-    const message = ctx.message.text;
-    if (!message || message.length < MIN_CATEGORY_NAME_LENGTH) {
-      ctx.reply(`Проверь, чтобы название категории было не меньше ${MIN_CATEGORY_NAME_LENGTH} символов`);
+const enterCategoryStep = async (ctx: WizardContext) => {
+  try {
+    const message = ctx.message?.text;
+    if (!message || !isValidNumber(message)) {
+      ctx.reply('Пожалуйста, введите корректное число');
       return;
     }
-    // const category = await CategoriesController.createCategory(user, message);
-    ctx.wizard.state.expense.category = 3;
-  } else {
-    ctx.wizard.state.expense.category = categoryId
-  }
 
-  const inline_keyboard = [[{ text: 'Трата была сегодня', callback_data: 'now' }]];
-  ctx.reply(`Введи дату в формате ${DATE_FORMAT_FOR_USER} или нажми на кнопку "Сегодня":`, sendButtons(inline_keyboard));
+    const user = new UserDto(ctx);
+    const authApi = new AuthApi(ctx);
 
-  return ctx.wizard.next()
-}
-
-const createExpenseStep = async (ctx) => {
-  const user = new UserDto(ctx);
-
-  const isToday = ctx.callbackQuery?.data === 'now';
-
-  console.log("isToday", isToday)
-
-  const saveExpense = async () => {
+    let userCategoryList = [];
     try {
+      const response = await authApi.CategoryService.getAll();
+      userCategoryList = [...response.data.data];
+    } catch (error) {
+      return handleApiError(ctx, error, 'Не удалось получить список категорий');
+    }
 
-      const data = {
-        chat_id: user.id,
-        category_id: ctx.wizard.state.expense.category,
-        amount: Number(ctx.wizard.state.expense.amount),
-        description: 'hello',
+    ctx.wizard.state.expense = ctx.wizard.state.expense || {};
+    ctx.wizard.state.expense.amount = message;
+
+    const inline_keyboard = userCategoryList.map(category => 
+      [{ text: category.category_name, callback_data: category.id }]
+    );
+
+    const messageText = inline_keyboard.length > 0
+      ? `Выберите категорию или введите новую (минимум ${MIN_CATEGORY_NAME_LENGTH} символов):`
+      : 'Введите название категории:';
+
+    ctx.reply(messageText, sendButtons(inline_keyboard));
+    return ctx.wizard.next();
+  } catch (error) {
+    console.error('Error in enterCategoryStep:', error);
+    ctx.reply('Произошла непредвиденная ошибка. Пожалуйста, попробуйте снова.');
+    return ctx.scene.leave();
+  }
+};
+
+const enterDateStep = async (ctx: WizardContext) => {
+  try {
+    const existCategoryId = ctx.callbackQuery?.data;
+    const user = new UserDto(ctx);
+    const authApi = new AuthApi(ctx);
+
+    if (!existCategoryId) {
+      const newUserCategoryName = ctx.message?.text;
+      if (!newUserCategoryName || newUserCategoryName.length < MIN_CATEGORY_NAME_LENGTH) {
+        ctx.reply(`Название категории должно содержать не менее ${MIN_CATEGORY_NAME_LENGTH} символов`);
+        return;
       }
 
-      const test = await ApiRequests.expense.createOne({
-        amount: data.amount,
-        category_id: data.category_id,
-        description: data.description,
-      })
-
-      console.log(test)
-      // await ExpenseController.createExpense(user, { categoryId: data.category_id, amount: data.amount, description: data.description})
-      // await createExpenseRequest(data);
-      ctx.reply(`Сумма: ${data.amount} успешно внесена`);
-    } catch (e) {
-      ctx.reply(`Что-то пошло не так. Попробуй позже ${e.message}`);
-      throw e
+      try {
+        const response = await authApi.CategoryService.createOne(newUserCategoryName);
+        ctx.wizard.state.expense.category = response.data.id;
+      } catch (error) {
+        return handleApiError(ctx, error, 'Не удалось создать категорию');
+      }
+    } else {
+      ctx.wizard.state.expense.category = existCategoryId;
     }
 
-    ctx.scene.leave()
+    const inline_keyboard = [[{ text: 'Трата была сегодня', callback_data: 'now' }]];
+    ctx.reply(
+      `Введите дату в формате ${DATE_FORMAT_FOR_USER_DISPLAY} или нажмите "Сегодня":`,
+      sendButtons(inline_keyboard)
+    );
+
+    return ctx.wizard.next();
+  } catch (error) {
+    console.error('Error in enterDateStep:', error);
+    ctx.reply('Произошла непредвиденная ошибка. Пожалуйста, попробуйте снова.');
+    return ctx.scene.leave();
   }
+};
 
-  if (isToday) {
-    ctx.wizard.state.date = new Date();
-    saveExpense()
-    // return ctx.wizard.next()
-  } else {
-    const message = ctx.message.text;
+const createExpenseStep = async (ctx: WizardContext) => {
+  try {
+    const user = new UserDto(ctx);
+    const authApi = new AuthApi(ctx);
+    const isToday = ctx.callbackQuery?.data === 'now';
 
-    const isValidDate = dayjs(message, 'DD.MM.YYYY').isValid();
-    if (message.length !== 10 && !isValidDate) {
-      return ctx.reply(`Вы ввели неправильный формат даты (${DATE_FORMAT_FOR_USER}) Повторите попытку`)
+    const saveExpense = async (date?: Date) => {
+      try {
+        if (!ctx.wizard.state.expense?.amount || !ctx.wizard.state.expense?.category) {
+          throw new Error('Отсутствуют обязательные данные о расходе');
+        }
+
+        const expenseData = {
+          amount: Number(ctx.wizard.state.expense.amount),
+          category_id: Number(ctx.wizard.state.expense.category),
+          description: 'hello', // Можно добавить шаг для ввода описания
+          date: date?.toISOString(),
+        };
+
+        await authApi.expense.createOne(expenseData);
+        ctx.reply(`Сумма ${expenseData.amount} успешно внесена`);
+      } catch (error) {
+        console.error('Error saving expense:', error);
+        throw error;
+      }
+    };
+
+    if (isToday) {
+      await saveExpense(new Date());
+    } else {
+      const message = ctx.message?.text;
+      if (!message) {
+        ctx.reply('Пожалуйста, введите дату');
+        return;
+      }
+
+      const isValidDate = dayjs(message, DATE_FORMAT_FOR_USER, true).isValid();
+      if (!isValidDate) {
+        return ctx.reply(`Неверный формат даты. Используйте ${DATE_FORMAT_FOR_USER_DISPLAY}`);
+      }
+
+      const date = dayjs(message, DATE_FORMAT_FOR_USER).toDate();
+      await saveExpense(date);
     }
-    saveExpense()
+
+    return ctx.scene.leave();
+  } catch (error) {
+    console.error('Error in createExpenseStep:', error);
+    ctx.reply(`Не удалось сохранить расход: ${error.message}`);
+    return ctx.scene.leave();
   }
-}
+};
 
 const steps = [
   enterSumStep,
   enterCategoryStep,
   enterDateStep,
   createExpenseStep,
-]
+];
 
 export const newExpense = new Scenes.WizardScene('new_expense_scene', ...steps);

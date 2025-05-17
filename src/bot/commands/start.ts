@@ -1,15 +1,14 @@
+// @ts-nocheck
 import { Context } from 'telegraf';
-// import { UserDto } from '../../backend/api/models/userDto';
-// import { UserController } from '../../backend/api/controllers/user';
+import { UserDto } from '../../api/userDto';
+import { PublicApi } from '../../api/publicApi/publicApi';
+import { AxiosResponse } from 'axios';
 
 export const start = async (ctx: Context) => {
-
-  // const user = new UserDto(ctx)
-
-  // const result = await UserController.getUser(user);
-  // if (result) return ctx.sendMessage(`Сессия уже создана ${JSON.stringify(result)}`);
-
-  // await UserController.createUser(user);
-  return ctx.sendMessage('Сессия успешно создана!');
-
+  const { username } = new UserDto(ctx)
+  const token = ctx.session?.user?.token;
+  if (token) {
+    return ctx.sendMessage(`Привет ${username}`);
+  }
+  ctx.scene.enter('new_sign_in')
 }

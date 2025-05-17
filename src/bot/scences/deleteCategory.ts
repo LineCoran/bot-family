@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { Scenes } from 'telegraf';
-import { UserDto } from '../../backend/api/models/userDto';
+import { UserDto } from '../../api/userDto';
 // import { CategoriesController } from '../../backend/api/controllers/categories';
 // import { ExpenseController, ICreateExpenseParams } from '../../backend/api/controllers/expense';
 
