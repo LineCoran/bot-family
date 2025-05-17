@@ -7,10 +7,10 @@ import { scences } from './bot/scences';
 import { getExpenses } from './bot/commands/getExpenses';
 import { authMiddleware } from './middleware/authMiddleware';
 
-const BOT_TOKEN = process.env.BOT_TOKEN || '';
+const tgToken = process.env.FAMILY_BOT_TOKEN || '';
 const ENVIRONMENT = process.env.NODE_ENV || '';
 
-const bot = new Telegraf(BOT_TOKEN);
+const bot = new Telegraf(tgToken);
 
 bot.telegram.setMyCommands([
   {
