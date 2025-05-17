@@ -2,11 +2,12 @@
   "name": "bot-money",
   "version": "1.1.0",
   "description": "Telegram Bot For Finance Money",
-  "main": "src/index.ts",
+  "main": "src/main.ts",
   "author": "LineCoran",
   "homepage": "https://github.com/LineCoran/bot-family.git",
   "dependencies": {
     "@vercel/node": "^3.2.24",
+    "axios": "^1.8.4",
     "dayjs": "^1.11.13",
     "dotenv-cli": "^7.4.2",
     "pg": "^8.13.1",
@@ -23,9 +24,9 @@
     "typescript": "^5.6.3"
   },
   "scripts": {
-    "dev": "DEBUG=bot* dotenv -- nodemon -e ts -x ts-node src/index.ts",
-    "devWindows": "@powershell -Command $env:DEBUG='bot*';dotenv -- -- nodemon -e ts -x ts-node src/index.ts",
-    "build": "ncc build src/index.ts -o public -m",
+    "dev": "DEBUG=bot* dotenv -- nodemon -e ts -x ts-node src/main.ts",
+    "devWindows": "@powershell -Command $env:DEBUG='bot*';dotenv -- -- nodemon -e ts -x ts-node src/main.ts",
+    "build": "ncc build src/main.ts -o public -m",
     "prettier": "prettier --write 'src/**/*.ts'",
     "lint": "tsc --noemit"
   }

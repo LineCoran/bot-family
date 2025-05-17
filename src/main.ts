@@ -2,11 +2,11 @@
 
 import { Context, Telegraf, Scenes, session, } from 'telegraf';
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { development, production } from './core';
+import { development, production } from './bot/core';
 import { errorMiddleware } from './middleware/errorMiddleware';
-import { start } from './commands/start';
-import { scences } from './scences';
-import { getExpenses } from './commands/getExpenses';
+import { start } from './bot/commands/start';
+import { scences } from './bot/scences';
+import { getExpenses } from './bot/commands/getExpenses';
 
 const BOT_TOKEN = process.env.BOT_TOKEN || '';
 const ENVIRONMENT = process.env.NODE_ENV || '';
@@ -25,6 +25,10 @@ bot.telegram.setMyCommands([
   {
     command: '/get_expenses',
     description: 'Получить расходы'
+  },
+  {
+    command: '/delete_category',
+    description: 'Удалить категорию'
   }
 ])
 
@@ -36,6 +40,7 @@ bot.catch(errorMiddleware)
 
 bot.command('start', start);
 bot.command('new_expense', (ctx: Context) => ctx.scene.enter('new_expense_scene'));
+bot.command('delete_category', (ctx: Context) => ctx.scene.enter('delete_category_scene'));
 bot.command('get_expenses', getExpenses);
 
 
