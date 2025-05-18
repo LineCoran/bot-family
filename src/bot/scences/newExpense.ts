@@ -138,7 +138,7 @@ const createExpenseStep = async (ctx: WizardContext) => {
           amount: Number(ctx.wizard.state.expense.amount),
           category_id: Number(ctx.wizard.state.expense.category),
           description: 'hello', // Можно добавить шаг для ввода описания
-          date: date?.toISOString(),
+          created_at: date?.toISOString(),
         };
 
         await authApi.expense.createOne(expenseData);
