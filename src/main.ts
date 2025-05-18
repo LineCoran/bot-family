@@ -1,11 +1,11 @@
 // @ts-nocheck
 import { Context, Telegraf, Scenes, session, } from 'telegraf';
 import { development } from './bot/core';
-import { errorMiddleware } from './middleware/errorMiddleware';
+import { errorMiddleware } from './api/middleware/errorMiddleware';
 import { start } from './bot/commands/start';
 import { scences } from './bot/scences';
 import { getExpenses } from './bot/commands/getExpenses';
-import { authMiddleware } from './middleware/authMiddleware';
+import { authMiddleware } from './api/middleware/authMiddleware';
 
 const tgToken = process.env.FAMILY_BOT_TOKEN || '';
 const ENVIRONMENT = process.env.NODE_ENV || '';

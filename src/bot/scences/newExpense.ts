@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { Scenes } from 'telegraf';
-import { dayjs } from '../../shared/utils/date-utils';
+import { dayjs } from '../shared/utils/date-utils';
 import { AuthApi } from '../../api/authApi/authApi';
 import { UserDto } from '../../api/userDto';
 
