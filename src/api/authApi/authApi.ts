@@ -9,6 +9,7 @@ interface ICreateExpenseBody {
     amount: number;
     description: string;
     category_id: number;
+    created_at?: Date;
 }
 
 export class AuthApi {
@@ -28,7 +29,8 @@ export class AuthApi {
     }
 
     expense = {
-        createOne: (body: ICreateExpenseBody) => this.api.post('/api/expenses', body)
+        createOne: (body: ICreateExpenseBody) => this.api.post('/api/expenses', body),
+        getAll: () => this.api.get('/api/expenses')
     };
 
     CategoryService = {
