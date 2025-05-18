@@ -2,6 +2,7 @@
 import { Scenes } from 'telegraf';
 import { UserDto } from '../../api/userDto';
 import { PublicApi } from '../../api/publicApi/publicApi';
+import { readTokens, writeTokens } from '../shared/tokensHelper';
 
 const isExistUser = async (username: string) => {
   try {
@@ -36,7 +37,9 @@ const signInScene = async (ctx) => {
   try {
 
     const { data: { token }} = await PublicApi.user.signIn({ password, username: user.username })
-    ctx.session = {...ctx.session, user: { token } }
+    const tokens = readTokens();
+    saveTokenToCtx(ctx, token)
+    writeTokens({...tokens, [user.username]: token})
     
   } catch (error) {
     return ctx.reply(`Неверный пароль! ${error.message}` )
